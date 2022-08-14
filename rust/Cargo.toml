@@ -1,0 +1,29 @@
+[package]
+name = "test-grpc"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+
+#[[bin]]
+#name = "echo-server"
+#path = "src/bin/server.rs"
+#
+#[[bin]]
+#name = "echo-client"
+#path = "src/bin/client.rs"
+
+[[bench]]
+name = "bench_client"
+harness = false
+
+[dependencies]
+tonic = "0.8"
+prost = "0.11"
+tokio = { version = "1.20", features = [ "rt-multi-thread", "time", "fs", "macros", "net",] }
+sha2 = "0.10"
+
+[build-dependencies]
+tonic-build = "0.8"
+
+[dev-dependencies]
+criterion = { version = "0.3", features = [ "async_tokio",] }
