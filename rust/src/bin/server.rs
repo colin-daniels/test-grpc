@@ -2,7 +2,6 @@ use sha2::{Digest, Sha512};
 use std::net::SocketAddr;
 use test_grpc::proto;
 use test_grpc::proto::{EchoRequest, EchoResponse};
-use tokio::sync::mpsc;
 use tonic::{transport::Server, Request, Response, Status};
 
 type EchoResult<T> = Result<Response<T>, Status>;
@@ -30,40 +29,23 @@ impl proto::echo_server::Echo for EchoServer {
     }
 }
 
-fn main() {
+#[tokio::main(flavor = "current_thread")]
+async fn main() -> Result<(), anyhow::Error> {
     pretty_env_logger::init_timed();
 
-    let rt = tokio::runtime::Builder::new_current_thread()
-        .enable_all()
-        .build()
-        .unwrap();
+    let addr = "[::1]:50051".parse()?;
+    let server = EchoServer { addr };
 
-    rt.block_on(async {
-        let addrs = ["[::1]:50051"];
+    let serve = Server::builder()
+        .add_service(proto::echo_server::EchoServer::new(server))
+        .serve(addr);
 
-        let (tx, mut rx) = mpsc::unbounded_channel();
-
-        for addr in &addrs {
-            let addr = addr.parse()?;
-            let tx = tx.clone();
-
-            let server = EchoServer { addr };
-            let serve = Server::builder()
-                .add_service(proto::echo_server::EchoServer::new(server))
-                .serve(addr);
-
-            tokio::spawn(async move {
-                if let Err(e) = serve.await {
-                    log::error!("Error = {:?}", e);
-                }
-
-                tx.send(()).unwrap();
-            });
+    tokio::spawn(async move {
+        if let Err(e) = serve.await {
+            log::error!("Error = {:?}", e);
         }
-
-        rx.recv().await;
-
-        Ok::<(), Box<dyn std::error::Error>>(())
     })
-    .unwrap();
+    .await?;
+
+    Ok::<(), anyhow::Error>(())
 }

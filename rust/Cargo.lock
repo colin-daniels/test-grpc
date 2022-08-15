@@ -1117,6 +1117,7 @@ dependencies = [
 name = "test-grpc"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "criterion",
  "log",
  "pretty_env_logger",

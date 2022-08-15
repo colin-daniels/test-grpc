@@ -33,6 +33,7 @@ fn grpc_sha512(c: &mut Criterion) {
     let mut group = c.benchmark_group("grpc_sha512");
     group.sample_size(1000);
 
+    // Benchmark .Net and rust servers for different payload sizes.
     for size in [1, 2, 4, 6, 8, 12, 16, 24, 32, 48, 64, 96, 128] {
         let size = size * 1024;
         group.throughput(Throughput::Bytes(size as u64));
