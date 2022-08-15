@@ -1,7 +1,7 @@
 use sha2::{Digest, Sha512};
 use std::net::SocketAddr;
-use test_grpc::pb;
-use test_grpc::pb::{EchoRequest, EchoResponse};
+use test_grpc::proto;
+use test_grpc::proto::{EchoRequest, EchoResponse};
 use tokio::sync::mpsc;
 use tonic::{transport::Server, Request, Response, Status};
 
@@ -12,21 +12,26 @@ pub struct EchoServer {
     addr: SocketAddr,
 }
 
-#[tonic::async_trait]
-impl pb::echo_server::Echo for EchoServer {
-    async fn unary_echo(&self, request: Request<EchoRequest>) -> EchoResult<EchoResponse> {
-        let mut hasher = Sha512::new();
-        hasher.update(request.into_inner().message);
+fn sha512(data: String) -> sha2::digest::Output<Sha512> {
+    let mut hasher = Sha512::new();
+    hasher.update(data);
+    hasher.finalize()
+}
 
-        let message = format!("{:x} (from {})", hasher.finalize(), self.addr);
+#[tonic::async_trait]
+impl proto::echo_server::Echo for EchoServer {
+    async fn unary_echo(&self, request: Request<EchoRequest>) -> EchoResult<EchoResponse> {
+        let remote_addr = request.remote_addr().unwrap();
+        let hash = sha512(request.into_inner().message);
+        log::info!("computed sha512: {:x} (for {})", hash, remote_addr);
+
+        let message = format!("{:x} (from {})", hash, self.addr);
         Ok(Response::new(EchoResponse { message }))
     }
 }
 
-// #[tokio::main]
-// async fn main() -> Result<(), Box<dyn std::error::Error>> {
 fn main() {
-    // let addrs = ["[::1]:50051", "[::1]:50052"];
+    pretty_env_logger::init_timed();
 
     let rt = tokio::runtime::Builder::new_current_thread()
         .enable_all()
@@ -44,12 +49,12 @@ fn main() {
 
             let server = EchoServer { addr };
             let serve = Server::builder()
-                .add_service(pb::echo_server::EchoServer::new(server))
+                .add_service(proto::echo_server::EchoServer::new(server))
                 .serve(addr);
 
             tokio::spawn(async move {
                 if let Err(e) = serve.await {
-                    eprintln!("Error = {:?}", e);
+                    log::error!("Error = {:?}", e);
                 }
 
                 tx.send(()).unwrap();

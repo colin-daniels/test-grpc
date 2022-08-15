@@ -1,6 +1,6 @@
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
 
-use test_grpc::pb::{echo_client::EchoClient, EchoRequest};
+use test_grpc::proto::{echo_client::EchoClient, EchoRequest};
 use tokio::runtime::Runtime;
 use tonic::transport::Channel;
 
@@ -30,10 +30,7 @@ fn request_blocking(rt: &Runtime, client: &mut EchoClient<Channel>, message: Str
 }
 
 fn grpc_sha512(c: &mut Criterion) {
-    // let plot_config = PlotConfiguration::default().summary_scale(AxisScale::Logarithmic);
-
     let mut group = c.benchmark_group("grpc_sha512");
-    // group.plot_config(plot_config);
     group.sample_size(1000);
 
     for size in [1, 2, 4, 6, 8, 12, 16, 24, 32, 48, 64, 96, 128] {
@@ -54,23 +51,6 @@ fn grpc_sha512(c: &mut Criterion) {
     }
     group.finish();
 }
-
-// fn rust_benchmark(c: &mut Criterion) {
-//     let mut group = c.benchmark_group("rust_benchmark");
-//     group.sample_size(1000);
-//     for size in [1, 2, 4, 6, 8, 12, 16, 24, 32, 48, 64, 96, 128] {
-//         let size = size * 1024;
-//
-//         group.throughput(Throughput::Bytes(size as u64));
-//         group.bench_with_input(BenchmarkId::from_parameter(size), &size, |b, &size| {
-//             let message: &str = &"abcd".repeat(size / 4);
-//
-//             let (rt, mut client) = make_client(["http://[::1]:50051"]);
-//             b.iter(|| request_blocking(&rt, &mut client, message.into()))
-//         });
-//     }
-//     group.finish();
-// }
 
 criterion_group!(benches, grpc_sha512);
 criterion_main!(benches);
